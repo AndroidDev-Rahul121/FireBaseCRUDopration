@@ -28,27 +28,20 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+//        initialize the FirebaseDatabase
+
         val database = FirebaseDatabase.getInstance()
         val myRef = database.reference.child("users")
 
 
-
+// insert Data
         binding.addData.setOnClickListener {
             val dilogBinding = AddDataBinding.inflate(layoutInflater)
-            // Create the alert dialog builder.
             val builder = AlertDialog.Builder(this@MainActivity)
-
-// Set the view on the dialog builder.
             builder.setView(dilogBinding.root)
-//
-            // Create and show the dialog.
-//            val dialog = builder.create()
-//            dialog.show()
-//            val alertDialog = AlertDialog.Builder(this@MainActivity)
-                builder.setTitle("Add")
-//                .setView(view1)
+
+            builder.setTitle("Insert")
                 .setPositiveButton("Add", null)
-//
                 .setNegativeButton("Cancel") { dialogInterface, _ ->
                     dialogInterface.dismiss()
                 }
@@ -95,18 +88,16 @@ class MainActivity : AppCompatActivity() {
 
 
 
+    // load data from firebase
+// Update and Delete add
        myRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val arrayList = ArrayList<User>()
                 for (dataSnapshot in snapshot.children) {
 
                     val userdata = dataSnapshot.getValue(User::class.java)
-//                    val id = snapshot.child("id").getValue(String::class.java)
-//                    val name = snapshot.child("name").getValue(String::class.java)
-//                    val email = snapshot.child("email").getValue(String::class.java)
+//                  load data from firebase
 
-//                    val userdata = User(id?: "", name?: "", email?: "")
-//                    userdata?.id = dataSnapshot.key
                     userdata.let {
                         if (it != null) {
                             arrayList.add(it)
@@ -129,12 +120,7 @@ class MainActivity : AppCompatActivity() {
 
                 adapter.setOnItemClickListener(object : DataAdapter.OnItemClickListener {
                     override fun onClick(data: User) {
-                        showEditDeletDalog(data)
-                    }
-
-                    private fun showEditDeletDalog(data: User) {
-                        val view =
-                            LayoutInflater.from(this@MainActivity).inflate(R.layout.add_data, null)
+                        val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.add_data, null)
                         val nameLayout: TextInputLayout = view.findViewById(R.id.nameLayout)
                         val emailLayout: TextInputLayout = view.findViewById(R.id.email_layout)
                         val name: TextInputEditText = view.findViewById(R.id.etv_name)
@@ -144,9 +130,9 @@ class MainActivity : AppCompatActivity() {
                         email.setText(data.email)
 
                         val progressDialog = ProgressDialog(this@MainActivity)
-
+// Update Data
                         val alertDialog = AlertDialog.Builder(this@MainActivity)
-                            .setTitle("Edit")
+                            .setTitle("Update/Delete")
                             .setView(view)
                             .setPositiveButton("Save") { dialogInterface, _ ->
                                 val newName = name.text.toString()
@@ -161,9 +147,7 @@ class MainActivity : AppCompatActivity() {
                                     progressDialog.show()
 
                                     val updatedData = User(data.id!!, newName, newEmail)
-                    //                                    val database = FirebaseDatabase.getInstance()
-                    //                                    val usersRef = database.reference.child("users")
-
+// Update Data save
                                     myRef.child(data.id)
                                         .setValue(updatedData)
                                         .addOnSuccessListener {
@@ -189,11 +173,13 @@ class MainActivity : AppCompatActivity() {
                             .setNeutralButton("Close") { dialogInterface, _ ->
                                 dialogInterface.dismiss()
                             }
+                            // Delete Data
+
                             .setNegativeButton("Delete") { dialogInterface, _ ->
                                 progressDialog.setTitle("Deleting...")
                                 progressDialog.show()
                                 Log.d("data", data.id!!)
-                                database.reference.child("users").child(data.id!!)
+                                database.reference.child("users").child(data.id)
                                     .removeValue()
                                     .addOnSuccessListener {
                                         progressDialog.dismiss()

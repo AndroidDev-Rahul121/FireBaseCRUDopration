@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">FireBase CRUD</string>
+    <string name="no_data">NO Data</string>
 </resources>
