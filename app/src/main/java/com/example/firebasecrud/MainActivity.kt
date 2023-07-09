@@ -50,8 +50,8 @@ class MainActivity : AppCompatActivity() {
             dialogA.setOnShowListener {
                 val addButton = dialogA.getButton(AlertDialog.BUTTON_POSITIVE)
                 addButton.setOnClickListener {
-                    val newName = dilogBinding.etvName.text.toString()
-                    val newEmail = dilogBinding.etvEmail.text.toString()
+                    val newName = dilogBinding.etvName.text!!.trim().toString()
+                    val newEmail = dilogBinding.etvEmail.text!!.trim().toString()
 
                     if (newName.isEmpty()) {
                         dilogBinding.nameLayout.error = "This field is required!"
@@ -87,8 +87,7 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-
-    // load data from firebase
+        // load data from firebase
 // Update and Delete add
        myRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -135,8 +134,8 @@ class MainActivity : AppCompatActivity() {
                             .setTitle("Update/Delete")
                             .setView(view)
                             .setPositiveButton("Save") { dialogInterface, _ ->
-                                val newName = name.text.toString()
-                                val newEmail = email.text.toString()
+                                val newName = name.text!!.trim().toString()
+                                val newEmail = email.text!!.trim().toString()
 
                                 if (newName.isEmpty()) {
                                     nameLayout.error = "This field is required!"
