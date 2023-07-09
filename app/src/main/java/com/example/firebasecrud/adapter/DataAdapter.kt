@@ -31,6 +31,9 @@ class DataAdapter(
         holder.itemView.setOnClickListener {
             onItemClickListener?.onClick(data)
         }
+//        onItemClickListener.let {
+//            it.onClick(holder,position)
+//        }
 
     }
 
@@ -50,5 +53,6 @@ class DataAdapter(
 
     interface OnItemClickListener {
         fun onClick(data:User)
+
     }
 }

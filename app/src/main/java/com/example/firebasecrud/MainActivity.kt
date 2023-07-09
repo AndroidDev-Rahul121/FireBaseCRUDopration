@@ -1,11 +1,13 @@
 package com.example.firebasecrud
 
 import android.app.ProgressDialog
+import android.content.DialogInterface
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.firebasecrud.adapter.DataAdapter
@@ -19,8 +21,11 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity()  {
     lateinit var binding:ActivityMainBinding
+    private lateinit var adapter: DataAdapter
+    private val database = FirebaseDatabase.getInstance()
+    val myRef = database.reference.child("users")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -30,60 +35,13 @@ class MainActivity : AppCompatActivity() {
 
 //        initialize the FirebaseDatabase
 
-        val database = FirebaseDatabase.getInstance()
-        val myRef = database.reference.child("users")
+//        val database = FirebaseDatabase.getInstance()
+//        val myRef = database.reference.child("users")
 
 
 // insert Data
         binding.addData.setOnClickListener {
-            val dilogBinding = AddDataBinding.inflate(layoutInflater)
-            val builder = AlertDialog.Builder(this@MainActivity)
-            builder.setView(dilogBinding.root)
-
-            builder.setTitle("Insert")
-                .setPositiveButton("Add", null)
-                .setNegativeButton("Cancel") { dialogInterface, _ ->
-                    dialogInterface.dismiss()
-                }
-                .create()
-            val dialogA = builder.create()
-            dialogA.setOnShowListener {
-                val addButton = dialogA.getButton(AlertDialog.BUTTON_POSITIVE)
-                addButton.setOnClickListener {
-                    val newName = dilogBinding.etvName.text!!.trim().toString()
-                    val newEmail = dilogBinding.etvEmail.text!!.trim().toString()
-
-                    if (newName.isEmpty()) {
-                        dilogBinding.nameLayout.error = "This field is required!"
-                    } else if (newEmail.isEmpty()) {
-                        dilogBinding.emailLayout.error = "This field is required!"
-                    } else {
-                        val dialog = ProgressDialog(this@MainActivity)
-                        dialog.setMessage("Storing in Database...")
-                        dialog.show()
-
-//                        val database = FirebaseDatabase.getInstance()
-//                        val usersRef = database.reference.child("users")
-
-                        val newUserId = myRef.push().key
-                        val newUser = User(newUserId, newName, newEmail)
-
-                        myRef.child(newUserId!!)
-                            .setValue(newUser)
-                            .addOnSuccessListener {
-                                dialog.dismiss()
-                                dialogA.dismiss() // Dismiss the dialog when saving is successful
-                                Toast.makeText(this@MainActivity, "Saved Successfully!", Toast.LENGTH_SHORT).show()
-                            }
-                            .addOnFailureListener { e ->
-                                dialog.dismiss()
-                                Toast.makeText(this@MainActivity, "There was an error while saving data", Toast.LENGTH_SHORT).show()
-                            }
-                    }
-                }
-            }
-
-            dialogA.show()
+            insertData()
         }
 
 
@@ -117,8 +75,10 @@ class MainActivity : AppCompatActivity() {
 
 
 
+
                 adapter.setOnItemClickListener(object : DataAdapter.OnItemClickListener {
                     override fun onClick(data: User) {
+                        // Dilog create without Data Binding
                         val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.add_data, null)
                         val nameLayout: TextInputLayout = view.findViewById(R.id.nameLayout)
                         val emailLayout: TextInputLayout = view.findViewById(R.id.email_layout)
@@ -146,26 +106,11 @@ class MainActivity : AppCompatActivity() {
                                     progressDialog.show()
 
                                     val updatedData = User(data.id!!, newName, newEmail)
-// Update Data save
-                                    myRef.child(data.id)
-                                        .setValue(updatedData)
-                                        .addOnSuccessListener {
-                                            progressDialog.dismiss()
-                                            dialogInterface.dismiss()
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "Saved Successfully!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                        .addOnFailureListener { e ->
-                                            progressDialog.dismiss()
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "There was an error while saving data",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
+
+                                    val id= data.id
+
+                                    // Update data save to firebase database with this function
+                                    addDataToFirebase(updatedData, progressDialog, dialogInterface,id)
                                 }
                             }
                     //
@@ -175,25 +120,10 @@ class MainActivity : AppCompatActivity() {
                             // Delete Data
 
                             .setNegativeButton("Delete") { dialogInterface, _ ->
-                                progressDialog.setTitle("Deleting...")
-                                progressDialog.show()
-                                Log.d("data", data.id!!)
-                                database.reference.child("users").child(data.id)
-                                    .removeValue()
-                                    .addOnSuccessListener {
-                                        progressDialog.dismiss()
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            "Deleted Successfully",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                    .addOnFailureListener { e ->
-                                        progressDialog.dismiss()
-                                    }
+                                deleteData(progressDialog, data)
 
 
-                    //
+                                //
                             }
                             .create()
 
@@ -211,15 +141,115 @@ class MainActivity : AppCompatActivity() {
         })
 
 
-
-
-
-
-
-
-
     }
 
+
+
+    private fun insertData() {
+        // Dilog create with  Data Binding
+        val dilogBinding = AddDataBinding.inflate(layoutInflater)
+        val builder = AlertDialog.Builder(this@MainActivity)
+        builder.setView(dilogBinding.root)
+
+        builder.setTitle("Insert Details:-")
+            .setPositiveButton("Add", null)
+            .setNegativeButton("Cancel") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+        val dialogA = builder.create()
+        dialogA.setOnShowListener {
+            val addButton = dialogA.getButton(AlertDialog.BUTTON_POSITIVE)
+            addButton.setOnClickListener {
+                val newName = dilogBinding.etvName.text!!.trim().toString()
+                val newEmail = dilogBinding.etvEmail.text!!.trim().toString()
+
+                if (newName.isEmpty()) {
+                    dilogBinding.nameLayout.error = "This field is required!"
+                } else if (newEmail.isEmpty()) {
+                    dilogBinding.emailLayout.error = "This field is required!"
+                } else {
+                    val dialog = ProgressDialog(this@MainActivity)
+                    dialog.setMessage("Storing in Database...")
+                    dialog.show()
+
+
+
+                    val newUserId = myRef.push().key
+                    val newUser = User(newUserId, newName, newEmail)
+
+                    // add data to firebase database with this function
+                    addDataToFirebase(newUser, dialog, dialogA,newUserId!!)
+
+//                    myRef.child(newUserId!!)
+//                        .setValue(newUser)
+//                        .addOnSuccessListener {
+//                            dialog.dismiss()
+//                            dialogA.dismiss() // Dismiss the dialog when saving is successful
+//                            Toast.makeText(
+//                                this@MainActivity,
+//                                "Saved Successfully!",
+//                                Toast.LENGTH_SHORT
+//                            ).show()
+//                        }
+//                        .addOnFailureListener { e ->
+//                            dialog.dismiss()
+//                            Toast.makeText(
+//                                this@MainActivity,
+//                                "There was an error while saving data",
+//                                Toast.LENGTH_SHORT
+//                            ).show()
+//                        }
+                }
+            }
+        }
+
+        dialogA.show()
+    }
+
+
+    private fun addDataToFirebase(updatedData: User, progressDialog: ProgressDialog, dialogInterface: DialogInterface,Id:String) {
+
+
+        myRef.child(Id)
+            .setValue(updatedData)
+            .addOnSuccessListener {
+                progressDialog.dismiss()
+                dialogInterface.dismiss()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Saved Successfully!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .addOnFailureListener { e ->
+                progressDialog.dismiss()
+                Toast.makeText(
+                    this@MainActivity,
+                    "There was an error while saving data",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+    }
+
+    private fun deleteData(progressDialog: ProgressDialog, data: User) {
+        progressDialog.setTitle("Deleting...")
+        progressDialog.show()
+        Log.d("data", data.id!!)
+        database.reference.child("users").child(data.id)
+            .removeValue()
+            .addOnSuccessListener {
+                progressDialog.dismiss()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Deleted Successfully",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .addOnFailureListener { e ->
+                progressDialog.dismiss()
+            }
+    }
 
 
 }
